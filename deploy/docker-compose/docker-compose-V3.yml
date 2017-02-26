@@ -1,0 +1,207 @@
+version: '3'
+
+services:
+
+  front-end:
+    image: weaveworksdemos/front-end
+    networks:
+      - demo
+    hostname: front-end
+    restart: always
+    read_only: true
+    deploy:
+      mode: replicated
+      replicas: 1
+  edge-router:
+    image: weaveworksdemos/edge-router
+    networks:
+      - demo
+    ports:
+      - '80:80'
+      - '8080:8080'
+    read_only: true
+    tmpfs:
+      - /var/run:rw,noexec,nosuid
+    hostname: edge-router
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+  catalogue:
+    image: weaveworksdemos/catalogue
+    networks:
+      - demo
+    hostname: catalogue
+    restart: always
+    read_only: true
+    environment:
+      - ZIPKIN=http://zipkin:9411/api/v1/spans
+    deploy:
+      mode: replicated
+      replicas: 1
+  catalogue-db:
+    image: weaveworksdemos/catalogue-db
+    networks:
+      - demo
+    hostname: catalogue-db
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_ALLOW_EMPTY_PASSWORD=true
+      - MYSQL_DATABASE=socksdb
+    deploy:
+      mode: replicated
+      replicas: 1
+  cart:
+    image: weaveworksdemos/cart
+    networks:
+      - demo
+    hostname: cart
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+    deploy:
+      mode: replicated
+      replicas: 1
+  cart-db:
+    image: mongo
+    networks:
+      - demo
+    hostname: cart-db
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+    deploy:
+      mode: replicated
+      replicas: 1
+  orders:
+    image: weaveworksdemos/orders
+    networks:
+      - demo
+    hostname: orders
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+    deploy:
+      mode: replicated
+      replicas: 1
+  orders-db:
+    image: mongo
+    networks:
+      - demo
+    hostname: orders-db
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+    deploy:
+      mode: replicated
+      replicas: 1
+  shipping:
+    image: weaveworksdemos/shipping
+    networks:
+      - demo
+    hostname: shipping
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+    deploy:
+      mode: replicated
+      replicas: 1
+  queue-master:
+    image: weaveworksdemos/queue-master
+    networks:
+      - demo
+    hostname: queue-master
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+    deploy:
+      mode: replicated
+      replicas: 1
+  rabbitmq:
+    image: rabbitmq:3
+    networks:
+      - demo
+    hostname: rabbitmq
+    restart: always
+    read_only: true
+    deploy:
+      mode: replicated
+      replicas: 1
+  payment:
+    image: weaveworksdemos/payment
+    networks:
+      - demo
+    hostname: payment
+    restart: always
+    read_only: true
+    environment:
+      - ZIPKIN=http://zipkin:9411/api/v1/spans
+    deploy:
+      mode: replicated
+      replicas: 1
+  user:
+    image: weaveworksdemos/user
+    networks:
+      - demo
+    hostname: user
+    restart: always
+    read_only: true
+    environment:
+      - MONGO_HOST=user-db:27017
+      - ZIPKIN=http://zipkin:9411/api/v1/spans
+    deploy:
+      mode: replicated
+      replicas: 1
+  user-db:
+    image: weaveworksdemos/user-db
+    networks:
+      - demo
+    hostname: user-db
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+    deploy:
+      mode: replicated
+      replicas: 1
+  zipkin:
+    image: openzipkin/zipkin
+    networks:
+      - demo
+    hostname: zipkin
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+    ports:
+      - "9411:9411"
+    deploy:
+      mode: replicated
+      replicas: 1
+  user-sim:
+    image: weaveworksdemos/load-test
+    networks:
+      - demo
+    read_only: true
+    hostname: user-simulator
+    command: "-d 60 -r 200 -c 2 -h edge-router"
+    deploy:
+      mode: replicated
+      replicas: 1
+
+networks:
+   demo:
+     driver: overlay
+     ipam:
+       driver: default
+       config:
+         - subnet: 10.1.0.0/24
